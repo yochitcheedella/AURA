@@ -1,0 +1,32 @@
+name = "aura-assistant"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "dist"
+
+# ===========================================================================
+# Pages Functions Environment Variables
+# These are the server-side secrets available inside functions/
+# Set PRODUCTION values in: Cloudflare Dashboard → Pages → Settings → Variables
+# ===========================================================================
+
+[vars]
+# Set these as SECRETS (not plaintext) in the CF Dashboard:
+# DATABASE_URL          = "postgresql://user:pass@ep-xxx.us-east-1.aws.neon.tech/aura?sslmode=require"
+# CLERK_FRONTEND_API_URL = "your-clerk-subdomain.clerk.accounts.dev"
+# CLERK_WEBHOOK_SECRET  = "whsec_xxxx"
+
+# ===========================================================================
+# Cloudflare R2 Bucket Binding (OPTIONAL — voice recordings / attachments)
+# Enable R2 in Cloudflare Dashboard first, then create the bucket:
+#   wrangler r2 bucket create aura-attachments
+# Then uncomment the block below and redeploy.
+# ===========================================================================
+# [[r2_buckets]]
+# binding    = "R2_BUCKET"
+# bucket_name = "aura-attachments"
+
+# ===========================================================================
+# Local development — wrangler pages dev
+# ===========================================================================
+[dev]
+local_protocol = "http"
+port           = 8787

@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURA - AI Unified Reminder Assistant</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <!-- Local Stylesheet -->
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <!-- Background Ambient Gradients -->
+    <div class="ambient-glow bg-glow-1"></div>
+    <div class="ambient-glow bg-glow-2"></div>
+
+    <!-- ====================================================================
+         AUTH GATE — shown when user is not signed in via Clerk.
+         Clerk JS mounts its Sign-In component into #clerk-sign-in-container.
+         This div is hidden by JS once the session is confirmed.
+         ==================================================================== -->
+    <div id="auth-gate" style="display:none; min-height:100vh; align-items:center; justify-content:center; flex-direction:column; gap:24px;">
+        <!-- Background glows remain visible -->
+        <div style="text-align:center; margin-bottom:8px;">
+            <span class="material-symbols-outlined" style="font-size:48px; color:var(--primary);">blur_on</span>
+            <h1 style="font-family:var(--font-headlines); font-size:32px; font-weight:800; letter-spacing:-0.5px; background:linear-gradient(135deg,#8b5cf6,#d0bcff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-top:8px;">AURA</h1>
+            <p style="color:var(--text-muted); font-size:13px; margin-top:4px;">AI Unified Reminder Assistant</p>
+        </div>
+        <!-- Clerk mounts the sign-in UI here — themed via clerk_auth.js appearance config -->
+        <div id="clerk-sign-in-container"></div>
+    </div>
+
+    <div class="app-layout" style="display:none;">
+        <!-- Sidebar: Simulation & Control Dashboard -->
+        <aside class="simulator-sidebar" id="simulator-sidebar" role="complementary" aria-label="System Simulator Console">
+            <div class="sidebar-header">
+                <span class="material-symbols-outlined icon-purple">terminal</span>
+                <h2>System Simulator</h2>
+                <button class="icon-btn close-sidebar-btn" id="toggle-sidebar-mobile-btn" aria-label="Close simulator sidebar">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Preset Prompts Section -->
+                <div class="sim-section">
+                    <h3><span class="material-symbols-outlined">keyboard_voice</span> Speech Simulation</h3>
+                    <p class="sim-help">Click a template below to simulate natural spoken input received by AURA.</p>
+                    <div class="preset-prompts-grid">
+                        <button class="preset-btn" data-speech="Submit project report in 10 seconds">
+                            <span class="preset-text">"Submit project report in 10s"</span>
+                            <span class="priority-badge p-critical">Critical</span>
+                        </button>
+                        <button class="preset-btn" data-speech="Meeting tomorrow at 9 AM with project team">
+                            <span class="preset-text">"Meeting tomorrow at 9 AM"</span>
+                            <span class="priority-badge p-high">High</span>
+                        </button>
+                        <button class="preset-btn" data-speech="Take medicine at 8 PM everyday">
+                            <span class="preset-text">"Take medicine at 8 PM daily"</span>
+                            <span class="priority-badge p-medium">Med</span>
+                        </button>
+                        <button class="preset-btn" data-speech="Drink water in 30 seconds">
+                            <span class="preset-text">"Drink water in 30s"</span>
+                            <span class="priority-badge p-low">Low</span>
+                        </button>
+                    </div>
+                    
+                    <div class="custom-prompt-container">
+                        <input type="text" id="sim-custom-speech" placeholder="Type custom voice command...">
+                        <button class="btn btn-primary" id="sim-send-speech-btn" aria-label="Send voice command">
+                            <span class="material-symbols-outlined" aria-hidden="true">send</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Instant Trigger Section -->
+                <div class="sim-section">
+                    <h3><span class="material-symbols-outlined">notification_important</span> Instant Alert Trigger</h3>
+                    <p class="sim-help">Force trigger an immediate alarm to test the chimes, speech voice, and escalation UI.</p>
+                    
+                    <div class="trigger-form">
+                        <div class="form-group">
+                            <label for="trigger-title">Alert Title</label>
+                            <input type="text" id="trigger-title" value="Emergency Server Maintenance">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="trigger-category">Category</label>
+                                <select id="trigger-category">
+                                    <option value="Meeting">Meeting</option>
+                                    <option value="Medicine">Medicine</option>
+                                    <option value="Assignment">Assignment</option>
+                                    <option value="Personal">Personal</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="trigger-priority">Priority</label>
+                                <select id="trigger-priority">
+                                    <option value="Low">Low</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="High">High</option>
+                                    <option value="Critical" selected>Critical</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary w-full" id="sim-trigger-alarm-btn" aria-label="Force trigger an escalation alarm">
+                            <span class="material-symbols-outlined" aria-hidden="true">bolt</span> Force Trigger Alert
+                        </button>
+                    </div>
+                </div>
+
+                <!-- WhatsApp Import Simulation Section -->
+                <div class="sim-section">
+                    <h3><span class="material-symbols-outlined">chat</span> WhatsApp Import</h3>
+                    <p class="sim-help">Simulate forwarding a message from WhatsApp to AURA (e.g. title, date/time info).</p>
+                    <div class="whatsapp-import-container">
+                        <textarea id="sim-whatsapp-message" rows="3" placeholder="Project Review&#10;Tomorrow 9 AM"></textarea>
+                        <button class="btn btn-secondary w-full" id="sim-import-wa-btn" aria-label="Import WhatsApp message as reminder">
+                            <span class="material-symbols-outlined icon-teal" aria-hidden="true">download</span> Import Message
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Timer / Queue Monitoring -->
+                <div class="sim-section">
+                    <h3><span class="material-symbols-outlined">hourglass_empty</span> Queue Engine Monitor</h3>
+                    <div class="monitor-stats">
+                        <div class="stat-card">
+                            <span class="stat-num" id="stat-active">0</span>
+                            <span class="stat-label">Active Alarms</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-num" id="stat-completed">0</span>
+                            <span class="stat-label">Acknowledged</span>
+                        </div>
+                    </div>
+                    <div class="sim-log-panel">
+                        <div class="log-header">
+                            <span>System Event Logs</span>
+                            <button id="clear-logs-btn">Clear</button>
+                        </div>
+                        <div class="log-entries" id="sim-logs">
+                            <div class="log-entry system">[System Initialized] AURA Engine is ready.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sim-footer">
+                    <button class="btn btn-ghost w-full" id="reset-storage-btn">
+                        <span class="material-symbols-outlined">restart_alt</span> Reset System Database
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Shell -->
+        <div class="main-shell" role="main">
+            <!-- Header Bar -->
+            <header class="app-header">
+                <div class="header-left">
+                    <button class="icon-btn sidebar-toggle-btn" id="sidebar-toggle-btn" title="Toggle Simulation Console" aria-label="Toggle simulator sidebar" aria-expanded="false" aria-controls="simulator-sidebar">
+                        <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
+                    </button>
+                    <div class="brand">
+                        <span class="material-symbols-outlined brand-logo">blur_on</span>
+                        <h1 class="brand-name">AURA</h1>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="system-status-indicator">
+                        <span class="pulse-dot"></span>
+                        <span class="status-text text-mute">Monitoring Active</span>
+                    </div>
+                    <button class="icon-btn" id="settings-btn" title="Settings" aria-label="Open production settings" aria-haspopup="dialog">
+                        <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+                    </button>
+                    <!-- Clerk UserButton (avatar + sign-out dropdown) mounted by JS -->
+                    <div id="user-button-container" style="display:flex; align-items:center;"></div>
+                </div>
+            </header>
+
+            <!-- Main Content Area (Dynamic Tabs) -->
+            <div class="tabs-container">
+                
+                <!-- Tab 1: Listen (Home Dashboard) -->
+                <section class="tab-content active" id="tab-listen">
+                    <div class="listening-container">
+                        <!-- Pulsing Centerpiece -->
+                        <div class="centerpiece-wrapper">
+                            <!-- Background radial aura -->
+                            <div class="aura-radial-glow"></div>
+                            
+                            <!-- Rotating outer orbit ring -->
+                            <div class="aura-orbit-ring orbit-outer"></div>
+                            <div class="aura-orbit-ring orbit-inner"></div>
+                            
+                            <!-- Pulsing Voice Button Core -->
+                            <button class="aura-core-btn" id="mic-trigger-btn" aria-label="Tap to start voice input" aria-pressed="false">
+                                <span class="material-symbols-outlined mic-icon" id="mic-main-icon" aria-hidden="true">mic</span>
+                                <!-- Small visualizer inside the core button -->
+                                <div class="core-wave-anim" id="core-wave" aria-hidden="true">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+                            </button>
+                        </div>
+
+                        <!-- Text Transcript and Feedback -->
+                        <div class="voice-feedback">
+                            <h2 class="status-heading" id="listening-status">Tap center orb to speak</h2>
+                            <p class="status-subtitle" id="listening-sub">AURA Voice-First Assistant</p>
+                            
+                            <div class="transcript-box hidden" id="transcript-container">
+                                <p class="transcript-label">Transcribed Speech</p>
+                                <p class="transcript-text" id="transcript-output">...</p>
+                            </div>
+                        </div>
+
+                        <!-- Interactive Speech Visualizer -->
+                        <div class="audio-visualizer-container" id="visualizer-container">
+                            <div class="vis-bar"></div>
+                            <div class="vis-bar"></div>
+                            <div class="vis-bar"></div>
+                            <div class="vis-bar"></div>
+                            <div class="vis-bar"></div>
+                            <div class="vis-bar"></div>
+                            <div class="vis-bar"></div>
+                            <div class="vis-bar"></div>
+                            <div class="vis-bar"></div>
+                        </div>
+
+                        <!-- Helper Instruction Grid -->
+                        <div class="instruction-grid-wrapper">
+                            <h3>Voice Templates</h3>
+                            <div class="instruction-cards">
+                                <div class="glass-card instruction-card">
+                                    <span class="material-symbols-outlined">groups</span>
+                                    <h4>Meetings</h4>
+                                    <p>"Project review tomorrow at 9 AM"</p>
+                                </div>
+                                <div class="glass-card instruction-card">
+                                    <span class="material-symbols-outlined">medication</span>
+                                    <h4>Medicine</h4>
+                                    <p>"Remind me to take vitamins at 8 AM"</p>
+                                </div>
+                                <div class="glass-card instruction-card">
+                                    <span class="material-symbols-outlined">assignment</span>
+                                    <h4>Assignments</h4>
+                                    <p>"Submit research paper this Friday at 5 PM"</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab 2: Daily Briefing -->
+                <section class="tab-content" id="tab-briefing">
+                    <div class="briefing-container">
+                        <!-- Briefing Hero Section -->
+                        <div class="briefing-hero">
+                            <div class="greeting-info">
+                                <h2 id="briefing-greeting">Good Morning, Satya</h2>
+                                <p class="briefing-subtitle" id="briefing-date-subtitle">Your AURA is calibrated. Here is your itinerary for today.</p>
+                            </div>
+                            <!-- Weather Widget inside Hero -->
+                            <div class="glass-card weather-widget">
+                                <span class="material-symbols-outlined weather-icon">wb_sunny</span>
+                                <div class="weather-details">
+                                    <span class="temp">72°F</span>
+                                    <span class="loc">Sunny · San Francisco</span>
+                                </div>
+                        </div>
+
+                        <!-- Date Scroller -->
+                        <div class="date-scroller" id="briefing-date-scroller">
+                            <div class="date-scroll-item">
+                                <span class="day-name">MON</span>
+                                <span class="day-num">22</span>
+                            </div>
+                            <div class="date-scroll-item active">
+                                <span class="day-name">TUE</span>
+                                <span class="day-num">23</span>
+                                <div class="active-dot"></div>
+                            </div>
+                            <div class="date-scroll-item">
+                                <span class="day-name">WED</span>
+                                <span class="day-num">24</span>
+                            </div>
+                            <div class="date-scroll-item">
+                                <span class="day-name">THU</span>
+                                <span class="day-num">25</span>
+                            </div>
+                            <div class="date-scroll-item">
+                                <span class="day-name">FRI</span>
+                                <span class="day-num">26</span>
+                            </div>
+                            <div class="date-scroll-item">
+                                <span class="day-name">SAT</span>
+                                <span class="day-num">27</span>
+                            </div>
+                            <div class="date-scroll-item">
+                                <span class="day-name">SUN</span>
+                                <span class="day-num">28</span>
+                            </div>
+                        </div>
+
+                        <div class="briefing-layout-grid">
+                            <!-- Left: Timeline of Today's events -->
+                            <div class="timeline-column">
+                                <h3 class="section-title">Schedule Timeline</h3>
+                                <div class="timeline-wrapper">
+                                    <!-- Timeline line -->
+                                    <div class="timeline-line-vertical"></div>
+                                    <!-- Container for dynamically injected timeline items -->
+                                    <div class="timeline-items" id="timeline-list">
+                                        <!-- Placeholder item -->
+                                        <div class="timeline-item">
+                                            <div class="timeline-dot-wrapper">
+                                                <div class="timeline-dot"></div>
+                                            </div>
+                                            <div class="glass-card timeline-card">
+                                                <div class="timeline-card-header">
+                                                    <span class="timeline-time">9:00 AM</span>
+                                                    <span class="priority-badge p-high">High</span>
+                                                </div>
+                                                <h4 class="timeline-title">Project Meeting</h4>
+                                                <p class="timeline-desc">Reviewing Q4 roadmap with engineering.</p>
+                                                <div class="timeline-meta">
+                                                    <span class="material-symbols-outlined">location_on</span>
+                                                    <span>Virtual Room 4</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: AI Insights and Briefing Generator -->
+                            <div class="insights-column">
+                                <div class="glass-card ai-summary-card">
+                                    <div class="card-glow-layer"></div>
+                                    <div class="card-content-wrapper">
+                                        <div class="ai-orb-pulse">
+                                            <span class="material-symbols-outlined">mic</span>
+                                        </div>
+                                        <h4>Morning Intelligence</h4>
+                                        <p id="ai-insight-text">I've analyzed your upcoming schedules. Shall I read your daily voice summary briefing?</p>
+                                        <button class="btn btn-primary w-full" id="speak-briefing-btn">
+                                            <span class="material-symbols-outlined">play_circle</span> Generate Voice Summary
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="glass-card quote-card">
+                                    <p class="quote-label">Daily Focus</p>
+                                    <p class="quote-text">"Clarity precedes mastery."</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab 3: Reminder Queue -->
+                <section class="tab-content" id="tab-queue">
+                    <div class="queue-container">
+                        <div class="queue-header">
+                            <div>
+                                <h2 class="section-title">Active Reminders Queue</h2>
+                                <p class="section-subtitle">Manage upcoming scheduled notifications and alerts</p>
+                            </div>
+                            <div class="queue-actions">
+                                <button class="btn btn-ghost" id="clear-completed-btn">Clear Acknowledged</button>
+                            </div>
+                        </div>
+
+                        <!-- Category Filter Chips -->
+                        <div class="filter-row">
+                            <button class="filter-chip active" data-filter="all">All</button>
+                            <button class="filter-chip" data-filter="Meeting">Meetings</button>
+                            <button class="filter-chip" data-filter="Medicine">Medicine</button>
+                            <button class="filter-chip" data-filter="Assignment">Assignments</button>
+                            <button class="filter-chip" data-filter="Personal">Personal</button>
+                        </div>
+
+                        <!-- Queue list cards -->
+                        <div class="queue-grid" id="queue-list-container">
+                            <!-- Dynamically loaded glass cards -->
+                            <div class="empty-state">
+                                <span class="material-symbols-outlined">format_list_bulleted</span>
+                                <p>No scheduled reminders yet.</p>
+                                <button class="btn btn-ghost btn-sm" id="load-samples-btn">Load Demo Reminders</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab 4: Insights -->
+                <section class="tab-content" id="tab-insights">
+                    <div class="insights-container">
+                        <div class="insights-header">
+                            <h2 class="section-title">AI Productivity Insights</h2>
+                            <p class="section-subtitle">AURA analyses of your routine and focus patterns</p>
+                        </div>
+
+                        <!-- Smart Learning Automation Suggestion Card -->
+                        <div class="glass-card smart-learning-card">
+                            <div class="card-glow-layer"></div>
+                            <div class="smart-learning-flex">
+                                <div class="learning-details">
+                                    <div class="learning-tag">
+                                        <span class="material-symbols-outlined animate-pulse text-purple">psychology</span>
+                                        <span class="text-purple font-bold">Smart Learning</span>
+                                    </div>
+                                    <h3>Weekly Sync Automation Suggestion</h3>
+                                    <p>I've noticed you spend 15 minutes manually setting up your "Recurring Meeting" every week. Would you like me to automate this process for you?</p>
+                                </div>
+                                <button class="btn btn-primary" id="automate-sync-btn">Automate</button>
+                            </div>
+                        </div>
+
+                        <!-- Bento Grid: Charts & Stats -->
+                        <div class="insights-bento-grid">
+                            <!-- Weekly Productivity Bar Chart -->
+                            <div class="glass-card bento-item weekly-prod-card">
+                                <div class="chart-header">
+                                    <div>
+                                        <h4>Weekly Productivity</h4>
+                                        <p class="chart-subtitle">Average Efficiency</p>
+                                    </div>
+                                    <div class="chart-total-stat">
+                                        <span class="stat-percentage text-purple">84%</span>
+                                        <span class="stat-comparison text-success">+12% vs last week</span>
+                                    </div>
+                                </div>
+                                <div class="chart-bars-container">
+                                    <div class="bar-group">
+                                        <div class="bar-track">
+                                            <div class="bar-fill" style="height: 40%;"></div>
+                                        </div>
+                                        <span class="bar-day">M</span>
+                                    </div>
+                                    <div class="bar-group">
+                                        <div class="bar-track">
+                                            <div class="bar-fill" style="height: 65%;"></div>
+                                        </div>
+                                        <span class="bar-day">T</span>
+                                    </div>
+                                    <div class="bar-group">
+                                        <div class="bar-track">
+                                            <div class="bar-fill active" style="height: 84%;"></div>
+                                        </div>
+                                        <span class="bar-day text-purple font-bold">W</span>
+                                    </div>
+                                    <div class="bar-group">
+                                        <div class="bar-track">
+                                            <div class="bar-fill" style="height: 60%;"></div>
+                                        </div>
+                                        <span class="bar-day">T</span>
+                                    </div>
+                                    <div class="bar-group">
+                                        <div class="bar-track">
+                                            <div class="bar-fill" style="height: 75%;"></div>
+                                        </div>
+                                        <span class="bar-day">F</span>
+                                    </div>
+                                    <div class="bar-group">
+                                        <div class="bar-track">
+                                            <div class="bar-fill" style="height: 30%;"></div>
+                                        </div>
+                                        <span class="bar-day">S</span>
+                                    </div>
+                                    <div class="bar-group">
+                                        <div class="bar-track">
+                                            <div class="bar-fill" style="height: 20%;"></div>
+                                        </div>
+                                        <span class="bar-day">S</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Focus Distribution Progress Bars -->
+                            <div class="glass-card bento-item focus-dist-card">
+                                <h4>Focus Distribution</h4>
+                                <div class="focus-progress-list">
+                                    <div class="focus-progress-item">
+                                        <div class="progress-details">
+                                            <span>Deep Work</span>
+                                            <span class="text-purple font-bold">65%</span>
+                                        </div>
+                                        <div class="progress-track">
+                                            <div class="progress-fill" style="width: 65%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="focus-progress-item">
+                                        <div class="progress-details">
+                                            <span>Meetings</span>
+                                            <span class="text-lavender font-bold">20%</span>
+                                        </div>
+                                        <div class="progress-track">
+                                            <div class="progress-fill fill-lavender" style="width: 20%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="focus-progress-item">
+                                        <div class="progress-details">
+                                            <span>Learning</span>
+                                            <span class="text-teal font-bold">15%</span>
+                                        </div>
+                                        <div class="progress-track">
+                                            <div class="progress-fill fill-teal" style="width: 15%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="focus-card-footer">
+                                    <span class="footer-lbl text-mute">Total: 42.5 hrs</span>
+                                    <span class="material-symbols-outlined footer-icon">info</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Patterns List -->
+                        <div class="patterns-section">
+                            <h3 class="section-title">Recent Patterns</h3>
+                            <div class="patterns-list">
+                                <div class="glass-card pattern-item">
+                                    <div class="pattern-left">
+                                        <div class="pattern-icon-box box-purple">
+                                            <span class="material-symbols-outlined">bolt</span>
+                                        </div>
+                                        <div class="pattern-texts">
+                                            <h4>Evening Productivity Spike</h4>
+                                            <p>Observed consistently between 8:00 PM - 10:30 PM</p>
+                                        </div>
+                                    </div>
+                                    <div class="pattern-right">
+                                        <span class="badge badge-purple">High Impact</span>
+                                        <span class="material-symbols-outlined">chevron_right</span>
+                                    </div>
+                                </div>
+                                <div class="glass-card pattern-item">
+                                    <div class="pattern-left">
+                                        <div class="pattern-icon-box box-teal">
+                                            <span class="material-symbols-outlined">warning</span>
+                                        </div>
+                                        <div class="pattern-texts">
+                                            <h4>Morning Routine Gap</h4>
+                                            <p>Delayed startup routines observed on Tuesdays and Thursdays</p>
+                                        </div>
+                                    </div>
+                                    <div class="pattern-right">
+                                        <span class="badge badge-teal">Optimization</span>
+                                        <span class="material-symbols-outlined">chevron_right</span>
+                                    </div>
+                                </div>
+                                <div class="glass-card pattern-item">
+                                    <div class="pattern-left">
+                                        <div class="pattern-icon-box box-lavender">
+                                            <span class="material-symbols-outlined">bedtime</span>
+                                        </div>
+                                        <div class="pattern-texts">
+                                            <h4>Rest Quality Improvement</h4>
+                                            <p>Deep sleep duration increased by 24 minutes average</p>
+                                        </div>
+                                    </div>
+                                    <div class="pattern-right">
+                                        <span class="badge badge-lavender">Consistent</span>
+                                        <span class="material-symbols-outlined">chevron_right</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Footer (Legal & Info) -->
+                <footer class="app-footer">
+                    <div class="footer-links">
+                        <button class="footer-link-btn" id="legal-privacy-btn">Privacy Policy</button>
+                        <span class="footer-separator">•</span>
+                        <button class="footer-link-btn" id="legal-terms-btn">Terms of Service</button>
+                        <span class="footer-separator">•</span>
+                        <button class="footer-link-btn" id="legal-about-btn">About</button>
+                        <span class="footer-separator">•</span>
+                        <button class="footer-link-btn" id="legal-contact-btn">Support</button>
+                    </div>
+                    <p class="footer-copy">© 2026 AURA Inc. All rights reserved. Sync: Google Calendar (Synced) · Sentry (Active)</p>
+                </footer>
+
+            </div>
+
+            <!-- Bottom Navigation Bar -->
+            <nav class="app-navbar" role="navigation" aria-label="Main navigation">
+                <button class="nav-item active" data-tab="listen" aria-label="Listen tab" aria-current="page">
+                    <span class="material-symbols-outlined" aria-hidden="true">mic</span>
+                    <span class="nav-label">Listen</span>
+                </button>
+                <button class="nav-item" data-tab="briefing" aria-label="Daily briefing tab">
+                    <span class="material-symbols-outlined" aria-hidden="true">event_note</span>
+                    <span class="nav-label">Briefing</span>
+                </button>
+                <button class="nav-item" data-tab="queue" aria-label="Reminder queue tab">
+                    <span class="material-symbols-outlined" aria-hidden="true">format_list_bulleted</span>
+                    <span class="nav-label">Queue</span>
+                </button>
+                <button class="nav-item" data-tab="insights" aria-label="AI insights tab">
+                    <span class="material-symbols-outlined" aria-hidden="true">insights</span>
+                    <span class="nav-label">Insights</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Escalation Modal Overlay (Triggered by alarm firing) -->
+    <div class="escalation-overlay" id="escalation-overlay">
+        <div class="escalation-ambient-backdrop"></div>
+        
+        <div class="escalation-container">
+            <!-- Header section with warning pulse rings -->
+            <div class="escalation-header">
+                <div class="pulse-ring-wrapper">
+                    <div class="pulse-ring"></div>
+                    <div class="pulse-ring delay-1"></div>
+                    <div class="pulse-ring delay-2"></div>
+                    <span class="material-symbols-outlined warning-bell-icon">error_outline</span>
+                </div>
+                
+                <span class="priority-badge p-critical" id="alert-priority-badge">Critical Priority</span>
+            </div>
+
+            <!-- Main Alarm Content Card -->
+            <div class="glass-card escalation-card">
+                <div class="escalation-details">
+                    <h2 class="alarm-title" id="alert-title">Project Review Meeting in 5 Minutes</h2>
+                    <p class="alarm-subtitle" id="alert-sequence">This is the First Reminder in the sequence. Your attendance is marked as required.</p>
+                </div>
+
+                <!-- Live countdown progress bar -->
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="alert-progress-bar"></div>
+                </div>
+
+                <!-- Interactive Buttons -->
+                <div class="alarm-actions">
+                    <button class="btn btn-primary w-full alert-ack-btn" id="alert-acknowledge-btn">
+                        <span class="material-symbols-outlined">check_circle</span> Acknowledge Task
+                    </button>
+                    <div class="alarm-actions-row">
+                        <button class="btn btn-secondary flex-1 alert-snooze-btn" id="alert-snooze-btn">
+                            <span class="material-symbols-outlined">snooze</span> Snooze 5 Min
+                        </button>
+                        <button class="btn btn-danger flex-1 alert-dismiss-btn" id="alert-dismiss-btn">
+                            <span class="material-symbols-outlined">close</span> Dismiss
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metadata Grid -->
+            <div class="escalation-meta-grid">
+                <div class="glass-card meta-box">
+                    <div class="meta-icon-wrapper">
+                        <span class="material-symbols-outlined icon-purple">calendar_today</span>
+                    </div>
+                    <div class="meta-texts">
+                        <span class="meta-label">SCHEDULED</span>
+                        <span class="meta-val" id="alert-meta-schedule">Just Now</span>
+                    </div>
+                </div>
+                <div class="glass-card meta-box">
+                    <div class="meta-icon-wrapper">
+                        <span class="material-symbols-outlined icon-purple">folder_open</span>
+                    </div>
+                    <div class="meta-texts">
+                        <span class="meta-label">CATEGORY</span>
+                        <span class="meta-val" id="alert-meta-category">Meeting</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legal Modals Overlay -->
+    <div class="legal-overlay" id="legal-overlay">
+        <div class="legal-backdrop" id="legal-backdrop"></div>
+        <div class="glass-card legal-card">
+            <div class="legal-card-header">
+                <h2 id="legal-modal-title">Privacy Policy</h2>
+                <button class="icon-btn close-legal-btn" id="close-legal-btn">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="legal-card-content" id="legal-modal-body">
+                <!-- Injected via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Microphone Permission Helper Modal -->
+    <div class="mic-helper-overlay" id="mic-helper-overlay">
+        <div class="mic-helper-backdrop" id="mic-helper-backdrop"></div>
+        <div class="glass-card mic-helper-card">
+            <span class="material-symbols-outlined warning-bell-icon" style="font-size: 48px; color: var(--warning);">keyboard_voice</span>
+            <h2>Microphone Access Required</h2>
+            <p>AURA needs microphone permissions to capture your voice commands. Please click "Allow" in your browser's permission prompt, or reset microphone access in your browser settings and try again.</p>
+            <button class="btn btn-primary w-full" id="close-mic-helper-btn">Got It</button>
+        </div>
+    </div>
+
+    <!-- Production Settings Modal Overlay -->
+    <div class="settings-overlay" id="settings-overlay">
+        <div class="settings-backdrop" id="settings-backdrop"></div>
+        <div class="glass-card settings-card">
+            <div class="settings-card-header">
+                <h2><span class="material-symbols-outlined icon-purple">settings_suggest</span> Production Settings</h2>
+                <button class="icon-btn close-settings-btn" id="close-settings-btn">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="settings-card-content">
+                <!-- Credentials Section -->
+                <div class="settings-group">
+                    <h3>Environment Credentials</h3>
+                    <div class="form-group">
+                        <label for="env-supabase-url">Supabase API URL</label>
+                        <input type="text" id="env-supabase-url" placeholder="https://your-project.supabase.co">
+                    </div>
+                    <div class="form-group">
+                        <label for="env-supabase-key">Supabase Anon Public Key</label>
+                        <input type="password" id="env-supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                    </div>
+                    <div class="form-group">
+                        <label for="env-sentry-dsn">Sentry DSN (Telemetry & Logging)</label>
+                        <input type="text" id="env-sentry-dsn" placeholder="https://sentry-dsn@sentry.io/12345">
+                    </div>
+                    <button class="btn btn-primary w-full" id="save-env-btn">
+                        <span class="material-symbols-outlined">save</span> Save API Keys
+                    </button>
+                </div>
+                
+                <!-- RLS Security Documentation -->
+                <div class="settings-group">
+                    <h3>Supabase Row-Level Security (RLS)</h3>
+                    <div class="rls-policies-list">
+                        <div class="rls-policy-item">
+                            <span class="rls-table">users</span>
+                            <span class="rls-rule">authenticated.id == UserID</span>
+                        </div>
+                        <div class="rls-policy-item">
+                            <span class="rls-table">reminders</span>
+                            <span class="rls-rule">auth.uid() == UserID</span>
+                        </div>
+                        <div class="rls-policy-item">
+                            <span class="rls-table">notifications</span>
+                            <span class="rls-rule">reminders.UserID == auth.uid()</span>
+                        </div>
+                    </div>
+                    <p class="rls-note"><span class="material-symbols-outlined">verified_user</span> All table policies are compiled and active in Supabase.</p>
+                </div>
+                
+                <!-- GDPR & Compliance -->
+                <div class="settings-group">
+                    <h3>GDPR Compliance Operations</h3>
+                    <p class="sim-help">Export all user settings and reminders database, or permanently wipe storage.</p>
+                    <div class="compliance-actions-row">
+                        <button class="btn btn-secondary flex-1" id="gdpr-export-btn">
+                            <span class="material-symbols-outlined">download</span> Export Data (JSON)
+                        </button>
+                        <button class="btn btn-danger flex-1" id="gdpr-delete-btn">
+                            <span class="material-symbols-outlined">delete_forever</span> Purge Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button for voice input -->
+    <button class="fixed-fab" id="global-fab" title="Simulate Voice Input">
+        <span class="material-symbols-outlined">add</span>
+    </button>
+
+    <!-- Toast Notifications Center -->
+    <div class="toast-container" id="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- Local Script File -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
